@@ -86,7 +86,7 @@ for j in range(1):
         model.solve_update(Xs, Ys_wish, n=len(model.layers)-i) #n=random.randint(1, len(model.layers)))
         forw = model.forward(Xs)
         #print(forw.shape)
-        plt.plot(Xs[0,:], forw[0,:], label=f"Back->Front ({len(model.layers)-i})")
+        # plt.plot(Xs[0,:], forw[0,:], label=f"Back->Front ({len(model.layers)-i})")
         mse = np.mean((forw[0,:] - Ys_wish[0,:])**2)
         print(mse)
     
@@ -96,7 +96,7 @@ for j in range(1):
     for i in range(len(model.layers)):
         model.solve_update(Xs, Ys_wish, n=i + 1) #n=random.randint(1, len(model.layers)))
         forw = model.forward(Xs)
-        plt.plot(Xs[0,:], forw[0,:], label=f"Front->Back ({i + 1})")
+        # plt.plot(Xs[0,:], forw[0,:], label=f"Front->Back ({i + 1})")
         #print(forw.shape)
         mse = np.mean((forw[0,:] - Ys_wish[0,:])**2)
         print(mse)
@@ -123,7 +123,7 @@ print(f"mod/lin err: {mse_mod/mse_lin}")
 
 plt.plot(Xs[0,:], np.polyfit(Xs[0,:], Ys_wish[0,:], 1) @ Xs, label='simple line')
 
-# plt.plot(Xs[0,:], model.forward(Xs)[0,:], label='relu with training (custom)')
+plt.plot(Xs[0,:], model.forward(Xs)[0,:], label='relu with training (custom)')
 
 plt.plot(Xs[0,:], Ys_wish[0,:], label='real')
 
