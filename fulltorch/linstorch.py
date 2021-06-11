@@ -2,6 +2,7 @@ from typing import List
 import torch
 from torch import Tensor
 import torch.nn as nn
+from torch.nn.modules import linear
 from torch.nn.modules.activation import ReLU6
 from torch.nn.modules.linear import Linear
 from enum import Enum
@@ -41,9 +42,8 @@ def biasweight(linlay:nn.Linear):
     appendzeros = nn.ConstantPad1d((0,1), 0.)
     # print(linlay.weight)
     weightwpass = appendzeros(linlay.weight)
-    # print(weightwpass)
     ncol = weightwpass.size(1)
-    weightwpass = torch.vstack((weightwpass, torch.zeros(ncol)))
+    weightwpass = torch.vstack((weightwpass, torch.zeros(ncol, device=weightwpass.device)))
     weightwpass[-1, -1] = 1
 
     # print(weightwpass)
@@ -139,85 +139,35 @@ def solvemodule(module: nn.Module, forwX: torch.Tensor, backY: torch.Tensor) -> 
         raise NotImplementedError(f"Not implemented for {type(module).__name__}")
 
 def solve(modules: List[nn.Module], Xs: torch.Tensor, Ys: torch.Tensor) -> List[nn.Module]:
-    for i in reversed(getsolveable(modules)):
+    solveable = getsolveable(modules)
+    for i in reversed(solveable):
         forwx = forwardsto(modules, i, Xs)
         backy = backwards(modules, i + 1, Ys)
         modules[i] = solvemodule(modules[i], forwx, backy)
 
-    for i in getsolveable(modules):
+    for i in solveable[1:]: 
         forwx = forwardsto(modules, i, Xs)
         backy = backwards(modules, i + 1, Ys)
         modules[i] = solvemodule(modules[i], forwx, backy)
 
     return modules
 
-if __name__ == '__main__':
-    print("yo")
-    # mod = nn.Sequential(
-    #     nn.Sequential(
-    #         nn.Linear(5, 10, False),
-    #         nn.ReLU(),
-    #     ),
-    #     nn.Linear(10, 5, False),
-    #     nn.ReLU(),
-    #     nn.Linear(5, 2, False),
-    #     nn.ReLU(),
-    # )
-
-    mod = nn.Sequential(
-        nn.Sequential(
-            # nn.Linear(3, 1, True),
-            # nn.ReLU(),
-            nn.Linear(1, 1, True),
-            nn.ReLU(),
-            nn.Linear(1, 1, True),
-            nn.ReLU(),
-        ),
-    )
-
-    modules = flattenseq(mod)
-    print(modules)
-    checkvalidops(modules)
-
-    print(getsolveable(modules))
+def solvemodel(model: nn.Sequential, Xs: torch.Tensor, Ys: torch.Tensor, errorcheck:bool = True) -> nn.Sequential:
+    mod = None
     with torch.no_grad():
-        
-        ys = torch.Tensor([[2],[3]])
-        xs = torch.Tensor([[1],[2]])
+        modules = flattenseq(model)
+        if errorcheck: checkvalidops(modules)
+        mod = nn.Sequential(*solve(modules, Xs, Ys))
+    return mod
 
-        mod = nn.Sequential(*solve(modules, xs, ys))
-        print(mod(xs))
+if __name__ == '__main__':
+    mod = nn.Sequential(
+        nn.Linear(1, 1, True),
+        nn.ReLU()
+    )
+    xs = torch.Tensor([[1.],[2.]])
+    ys = torch.Tensor([[2.],[3.]])
 
-        # modules[0] = solvemodule(modules[0], xs, ys)
+    mod = solvemodel(mod, xs, ys)
 
-        # print(modules[0].weight)
-        # print(modules[0].bias)
-
-        # ys = APPENDONE(ys)
-        # xs = APPENDONE(xs)
-
-        # solve(modules, ys, xs)
-        # # print(solvelreg(xs, ys))
-        # solved = solvelreg(xs, ys)
-
-        # print(solved)
-        # weight = solved[:-1, :-1]
-        # bias = solved[:-1, -1]
-        # print(weight)
-        # print(bias)
-
-        # modules[0].weight = nn.Parameter(weight)
-        # modules[0].bias = nn.Parameter(bias)
-        
-        # xs = xs[:,:-1]
-        # print(modules[0].forward(xs))
-
-        # outp = backwards(modules, 0, torch.Tensor([[2]]))
-        # print(outp)
-        # print(outp.shape)
-
-        # print(mod(outp))
-        # print(modules[0].bias)
-        # outp = backwards(modules, 3, torch.Tensor([1, 2]))
-        # print(outp)
-        # print(outp.shape)-
+    print(mod(xs))
