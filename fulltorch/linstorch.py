@@ -7,7 +7,7 @@ from torch.nn.modules.linear import Linear
 from enum import Enum
 
 def solvelreg(x: Tensor, y: Tensor) -> Tensor:
-    return (torch.linalg.pinv(x.T) @ y.T).T
+    return (torch.linalg.pinv(x) @ y).T
 
 # natively solve a torch sequential model.
 # NOTE: Conv implementation will be slow due to python and a my lack of a clever way to go 'backwards' throught them
@@ -44,8 +44,9 @@ def biasweight(linlay:nn.Linear):
     print(weightwpass)
     ncol = weightwpass.size(1)
     weightwpass = torch.vstack((weightwpass, torch.zeros(ncol)))
-    weightwpass[-1, ncol-1] = 1
+    weightwpass[-1, -1] = 1
 
+    print(weightwpass)
     if linlay.bias is None:
         return weightwpass
     
@@ -125,7 +126,7 @@ if __name__ == '__main__':
     mod = nn.Sequential(
         nn.Sequential(
             #nn.Linear(3, 1, True),
-            nn.Linear(1, 1, True),
+            nn.Linear(2, 1, True),
             nn.ReLU(),
         ),
     )
@@ -134,13 +135,33 @@ if __name__ == '__main__':
     print(modules)
     checkvalidops(modules)
     with torch.no_grad():
-        outp = backwards(modules, 0, torch.Tensor([[2]]))
-        print(outp)
-        print(outp.shape)
+        ys = torch.Tensor([[2],[3]])
+        xs = torch.Tensor([[1,2],[2,3]])
+        appendone = nn.ConstantPad1d((0,1), 1.)
+        ys = appendone(ys)
+        xs = appendone(xs)
 
-        print(mod(outp))
-        print(modules[0].bias)
-        print(modules[0].bias)
+        # print(solvelreg(xs, ys))
+        solved = solvelreg(xs, ys)
+
+        print(solved)
+        weight = solved[:-1, :-1]
+        bias = solved[:-1, -1]
+        print(weight)
+        print(bias)
+
+        modules[0].weight = nn.Parameter(weight)
+        modules[0].bias = nn.Parameter(bias)
+        
+        xs = xs[:,:-1]
+        print(modules[0].forward(xs))
+
+        # outp = backwards(modules, 0, torch.Tensor([[2]]))
+        # print(outp)
+        # print(outp.shape)
+
+        # print(mod(outp))
+        # print(modules[0].bias)
         # outp = backwards(modules, 3, torch.Tensor([1, 2]))
         # print(outp)
         # print(outp.shape)
