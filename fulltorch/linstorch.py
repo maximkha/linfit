@@ -39,14 +39,14 @@ def checkvalidops(modules: List[nn.Module]):
 
 def biasweight(linlay:nn.Linear):
     appendzeros = nn.ConstantPad1d((0,1), 0.)
-    print(linlay.weight)
+    # print(linlay.weight)
     weightwpass = appendzeros(linlay.weight)
-    print(weightwpass)
+    # print(weightwpass)
     ncol = weightwpass.size(1)
     weightwpass = torch.vstack((weightwpass, torch.zeros(ncol)))
     weightwpass[-1, -1] = 1
 
-    print(weightwpass)
+    # print(weightwpass)
     if linlay.bias is None:
         return weightwpass
     
@@ -61,14 +61,21 @@ def backsingle(module: nn.Module, Ys: torch.Tensor) -> torch.Tensor:
     #TODO: implement cnn reverse here
     raise NotImplementedError()
 
-def getsolveable(modules: List[nn.Module]):
-    raise NotImplementedError()
+def getsolveable(modules: List[nn.Module]) -> List[int]:
+    outp = []
+    for i, module in enumerate(modules):
+        modtype = type(module)
+        if (not modtype in TRANSPARENT_OPS) and (modtype in VALID_OPS):
+            outp.append(i)
+    return outp
+
+APPENDONE = nn.ConstantPad1d((0,1), 1.)
 
 #TODO: refractor so it supports the bias
-def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor):
+def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor) -> torch.Tensor:
     # techincally we should call check valid ops here!!
-    # modules = flattenseq(model)
-    appendone = nn.ConstantPad1d((0,1), 1.)
+    # modules = flattenseq(model)    
+    global APPENDONE
 
     result = Ys
     weightstate = WeightState.NO
@@ -77,10 +84,10 @@ def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor):
         if type(module) in TRANSPARENT_OPS: continue
         if type(module) == nn.Linear:
             weight = biasweight(module)
-            print(weight)
+            # print(weight)
             if weightstate == WeightState.NO:
-                result = appendone(result)
-                print(result)
+                result = APPENDONE(result)
+                # print(result)
                 weightstate = WeightState.ACCUM
                 cuweight = weight
                 continue
@@ -98,9 +105,9 @@ def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor):
 
     if weightstate == WeightState.ACCUM: 
         #TODO: pop bias off of the reversed result
-        print(cuweight)
-        print(result.T)
-        print(torch.linalg.pinv(cuweight))
+        # print(cuweight)
+        # print(result.T)
+        # print(torch.linalg.pinv(cuweight))
         result = result @ torch.linalg.pinv(cuweight).T # result @ torch.linalg.pinv(cuweight)
         result = result[:,:-1]
     return result
@@ -109,6 +116,40 @@ def forwardsto(modules: List[nn.Module], n: int, Xs: torch.Tensor) -> torch.Tens
     for module in modules[:n]:
         Xs = module.forward(Xs)
     return Xs
+
+def solvemodule(module: nn.Module, forwX: torch.Tensor, backY: torch.Tensor) -> nn.Module:
+    if type(module) == nn.Linear:
+        weight = None
+        if module.bias is not None:
+            backY = APPENDONE(backY)
+            forwX = APPENDONE(forwX)
+            solved = solvelreg(forwX, backY)
+
+            weight = solved[:-1, :-1]
+            bias = solved[:-1, -1]
+
+            module.bias = nn.Parameter(bias)
+        else:
+            solved = solvelreg(forwX, backY)
+            weight = solved
+
+        module.weight = nn.Parameter(weight)
+        return module
+    else:
+        raise NotImplementedError(f"Not implemented for {type(module).__name__}")
+
+def solve(modules: List[nn.Module], Xs: torch.Tensor, Ys: torch.Tensor) -> List[nn.Module]:
+    for i in reversed(getsolveable(modules)):
+        forwx = forwardsto(modules, i, Xs)
+        backy = backwards(modules, i + 1, Ys)
+        modules[i] = solvemodule(modules[i], forwx, backy)
+
+    for i in getsolveable(modules):
+        forwx = forwardsto(modules, i, Xs)
+        backy = backwards(modules, i + 1, Ys)
+        modules[i] = solvemodule(modules[i], forwx, backy)
+
+    return modules
 
 if __name__ == '__main__':
     print("yo")
@@ -125,8 +166,11 @@ if __name__ == '__main__':
 
     mod = nn.Sequential(
         nn.Sequential(
-            #nn.Linear(3, 1, True),
-            nn.Linear(2, 1, True),
+            # nn.Linear(3, 1, True),
+            # nn.ReLU(),
+            nn.Linear(1, 1, True),
+            nn.ReLU(),
+            nn.Linear(1, 1, True),
             nn.ReLU(),
         ),
     )
@@ -134,27 +178,39 @@ if __name__ == '__main__':
     modules = flattenseq(mod)
     print(modules)
     checkvalidops(modules)
+
+    print(getsolveable(modules))
     with torch.no_grad():
-        ys = torch.Tensor([[2],[3]])
-        xs = torch.Tensor([[1,2],[2,3]])
-        appendone = nn.ConstantPad1d((0,1), 1.)
-        ys = appendone(ys)
-        xs = appendone(xs)
-
-        # print(solvelreg(xs, ys))
-        solved = solvelreg(xs, ys)
-
-        print(solved)
-        weight = solved[:-1, :-1]
-        bias = solved[:-1, -1]
-        print(weight)
-        print(bias)
-
-        modules[0].weight = nn.Parameter(weight)
-        modules[0].bias = nn.Parameter(bias)
         
-        xs = xs[:,:-1]
-        print(modules[0].forward(xs))
+        ys = torch.Tensor([[2],[3]])
+        xs = torch.Tensor([[1],[2]])
+
+        mod = nn.Sequential(*solve(modules, xs, ys))
+        print(mod(xs))
+
+        # modules[0] = solvemodule(modules[0], xs, ys)
+
+        # print(modules[0].weight)
+        # print(modules[0].bias)
+
+        # ys = APPENDONE(ys)
+        # xs = APPENDONE(xs)
+
+        # solve(modules, ys, xs)
+        # # print(solvelreg(xs, ys))
+        # solved = solvelreg(xs, ys)
+
+        # print(solved)
+        # weight = solved[:-1, :-1]
+        # bias = solved[:-1, -1]
+        # print(weight)
+        # print(bias)
+
+        # modules[0].weight = nn.Parameter(weight)
+        # modules[0].bias = nn.Parameter(bias)
+        
+        # xs = xs[:,:-1]
+        # print(modules[0].forward(xs))
 
         # outp = backwards(modules, 0, torch.Tensor([[2]]))
         # print(outp)
@@ -164,4 +220,4 @@ if __name__ == '__main__':
         # print(modules[0].bias)
         # outp = backwards(modules, 3, torch.Tensor([1, 2]))
         # print(outp)
-        # print(outp.shape)
+        # print(outp.shape)-
