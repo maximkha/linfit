@@ -4,8 +4,8 @@ from torch import Tensor
 import torch.nn as nn
 from enum import Enum
 
-def solvelreg(x: Tensor, y: Tensor) -> Tensor:
-    return (torch.linalg.pinv(x) @ y).T
+# def solvelreg(x: Tensor, y: Tensor) -> Tensor:
+#     return (torch.linalg.pinv(x) @ y).T
 
 # natively solve a torch sequential model.
 # NOTE: Conv implementation will be slow due to python and a my lack of a clever way to go 'backwards' throught them
@@ -130,14 +130,14 @@ def solvemodule(module: nn.Module, forwX: torch.Tensor, backY: torch.Tensor) -> 
             backY = APPENDONE(backY)
             forwX = APPENDONE(forwX)
 
-            solved = solvelreg(forwX, backY)
+            solved = (torch.linalg.pinv(forwX) @ backY).T # solvelreg(forwX, backY)
 
             weight = solved[:-1, :-1]
             bias = solved[:-1, -1]
 
             module.bias = nn.Parameter(bias)
         else:
-            solved = solvelreg(forwX, backY)
+            solved = (torch.linalg.pinv(forwX) @ backY).T # solvelreg(forwX, backY)
             weight = solved
 
         module.weight = nn.Parameter(weight)

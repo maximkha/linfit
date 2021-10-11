@@ -95,87 +95,104 @@ m, c = np.linalg.lstsq(A, Ys_train.cpu().numpy(), rcond=None)[0]
 print(f"{np.mean((Ys_train.cpu().numpy() - ((Xs_train.cpu().numpy() * m) + c))**2)=}")
 # exit()
 
-print("linstorch")
-
 for i in tqdm(list(range(100))):
     mod = genmodel()
     t0 = time.time()
-    # mod = linstorch.solvemodel(mod, Xs_train, (2*Ys_train)-1)
-
-    cmse = 1 #np.mean(((mod(Xs_train) - Ys_train)**2).detach().cpu().numpy())
-    while cmse > 0.6:
+    cmse = 1
+    while cmse > .4:
         mod = genmodel()
         mod = linstorch.solvemodel(mod, Xs_train, Ys_train)
         cmse = np.mean(((mod(Xs_train) - Ys_train)**2).detach().cpu().numpy())
 
     elapsedsecs = time.time() - t0
-    # print(f'{elapsedsecs} seconds')
-
-    # forw = mod.forward(Xs_test)
     forw = mod.forward(Xs_test)
 
-    perf_data["model"].append("linstorch")
+    perf_data["model"].append(f"linstorch")
+    perf_data["type"].append(f"linstorch")
     perf_data["elapsed"].append(elapsedsecs)
     perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
 
-print("SGD")
+# print("linstorch")
+# with torch.no_grad():
+#     for goal in np.linspace(.7, .4, 10): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
+#         for i in tqdm(list(range(100))):
+#             mod = genmodel()
+#             t0 = time.time()
+#             cmse = 1
+#             while cmse > goal:
+#                 mod = genmodel()
+#                 mod = linstorch.solvemodel(mod, Xs_train, Ys_train)
+#                 cmse = np.mean(((mod(Xs_train) - Ys_train)**2).detach().cpu().numpy())
 
-for j in list(range(1, 4)):
-    for i in tqdm(list(range(100))):
-        mod = genmodel()
-        t0 = time.time()
-        #optimizer = optim.Adam(mod.parameters())
-        optimizer = optim.SGD(mod.parameters(), lr=0.001, momentum=0.9)
-        #optimizer = optim.Adagrad(mod.parameters()) #optim.Adagrad(mod.parameters(), lr=0.001)
-        train(j, optimizer)
-        elapsedsecs = time.time() - t0
-        # print(f'{elapsedsecs} seconds')
+#             elapsedsecs = time.time() - t0
+#             forw = mod.forward(Xs_test)
 
-        forw = mod.forward(Xs_test)
+#             perf_data["model"].append(f"linstorch({goal})")
+#             perf_data["type"].append(f"linstorch")
+#             perf_data["elapsed"].append(elapsedsecs)
+#             perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
 
-        perf_data["model"].append(f"SGD{j}")
-        perf_data["elapsed"].append(elapsedsecs)
-        perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
+# print("SGD")
 
-print("Adagrad")
+# for j in list(range(1, 4)):
+#     for i in tqdm(list(range(100))):
+#         mod = genmodel()
+#         t0 = time.time()
+#         #optimizer = optim.Adam(mod.parameters())
+#         optimizer = optim.SGD(mod.parameters(), lr=0.001, momentum=0.9)
+#         #optimizer = optim.Adagrad(mod.parameters()) #optim.Adagrad(mod.parameters(), lr=0.001)
+#         train(j, optimizer)
+#         elapsedsecs = time.time() - t0
+#         # print(f'{elapsedsecs} seconds')
 
-for j in list(range(1, 6)):
-    for i in tqdm(list(range(100))):
-        mod = genmodel()
-        t0 = time.time()
-        #optimizer = optim.Adam(mod.parameters())
-        optimizer = optim.Adagrad(mod.parameters())
-        #optimizer = optim.Adagrad(mod.parameters()) #optim.Adagrad(mod.parameters(), lr=0.001)
-        train(j, optimizer)
-        elapsedsecs = time.time() - t0
-        # print(f'{elapsedsecs} seconds')
+#         forw = mod.forward(Xs_test)
 
-        forw = mod.forward(Xs_test)
+#         perf_data["model"].append(f"SGD{j}")
+#         perf_data["type"].append(f"SGD")
+#         perf_data["elapsed"].append(elapsedsecs)
+#         perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
 
-        perf_data["model"].append(f"Adagrad{j}")
-        perf_data["elapsed"].append(elapsedsecs)
-        perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
+# print("Adagrad")
 
-print("Adam")
+# for j in list(range(1, 20)):
+#     for i in tqdm(list(range(100))):
+#         mod = genmodel()
+#         t0 = time.time()
+#         #optimizer = optim.Adam(mod.parameters())
+#         optimizer = optim.Adagrad(mod.parameters())
+#         #optimizer = optim.Adagrad(mod.parameters()) #optim.Adagrad(mod.parameters(), lr=0.001)
+#         train(j, optimizer)
+#         elapsedsecs = time.time() - t0
+#         # print(f'{elapsedsecs} seconds')
 
-for j in list(range(1, 4)):
-    for i in tqdm(list(range(100))):
-        mod = genmodel()
-        t0 = time.time()
-        #optimizer = optim.Adam(mod.parameters())
-        optimizer = optim.Adam(mod.parameters())
-        #optimizer = optim.Adagrad(mod.parameters()) #optim.Adagrad(mod.parameters(), lr=0.001)
-        train(j, optimizer)
-        elapsedsecs = time.time() - t0
-        # print(f'{elapsedsecs} seconds')
+#         forw = mod.forward(Xs_test)
 
-        forw = mod.forward(Xs_test)
+#         perf_data["model"].append(f"Adagrad{j}")
+#         perf_data["type"].append(f"Adagrad")
+#         perf_data["elapsed"].append(elapsedsecs)
+#         perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
 
-        perf_data["model"].append(f"Adam{j}")
-        perf_data["elapsed"].append(elapsedsecs)
-        perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
+# print("Adam")
 
-import pandas as pd
+# for j in list(range(1, 4)):
+#     for i in tqdm(list(range(100))):
+#         mod = genmodel()
+#         t0 = time.time()
+#         #optimizer = optim.Adam(mod.parameters())
+#         optimizer = optim.Adam(mod.parameters())
+#         #optimizer = optim.Adagrad(mod.parameters()) #optim.Adagrad(mod.parameters(), lr=0.001)
+#         train(j, optimizer)
+#         elapsedsecs = time.time() - t0
+#         # print(f'{elapsedsecs} seconds')
 
-df = pd.DataFrame(perf_data)
-df.to_csv("out.csv")
+#         forw = mod.forward(Xs_test)
+
+#         perf_data["model"].append(f"Adam{j}")
+#         perf_data["type"].append(f"Adam")
+#         perf_data["elapsed"].append(elapsedsecs)
+#         perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
+
+# import pandas as pd
+
+# df = pd.DataFrame(perf_data)
+# df.to_csv("out.csv")
