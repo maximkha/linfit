@@ -2,9 +2,6 @@ from typing import List
 import torch
 from torch import Tensor
 import torch.nn as nn
-from torch.nn.modules import linear
-from torch.nn.modules.activation import ReLU6
-from torch.nn.modules.linear import Linear
 from enum import Enum
 
 def solvelreg(x: Tensor, y: Tensor) -> Tensor:
@@ -23,9 +20,10 @@ def flattenseq(model:nn.Sequential) -> List[nn.Module]:
             flat_layers.extend(flattenseq(module))
     return flat_layers
 
-VALID_OPS = [nn.Linear, nn.ReLU] # for now, we'll only support these
-TRANSPARENT_OPS = [nn.ReLU]
-SINGLEBACK_OPS = []
+VALID_OPS = [nn.Linear, nn.ReLU, nn.ELU, nn.Softmax, nn.Identity] # for now, we'll only support these
+TRANSPARENT_OPS = [nn.ReLU, nn.Softmax, nn.Identity]
+SINGLEBACK_OPS = [nn.ELU]
+SOLVEABLE = [nn.Linear]
 
 # maybe make a wrapper class for seq???
 def checkvalidops(modules: List[nn.Module]):
@@ -58,14 +56,21 @@ class WeightState(Enum):
     ACCUM = 1
 
 def backsingle(module: nn.Module, Ys: torch.Tensor) -> torch.Tensor:
-    #TODO: implement cnn reverse here
+    if type(module) == nn.ELU:
+        # tmod:nn.ELU = module
+        assert module.alpha == 1.
+        x = torch.where(Ys < 0, torch.log(Ys+1), Ys)
+        x[x==-float('inf')] = -36.7368 #empirical
+        return x
+
     raise NotImplementedError()
 
 def getsolveable(modules: List[nn.Module]) -> List[int]:
+    global SOLVEABLE, VALID_OPS
     outp = []
     for i, module in enumerate(modules):
         modtype = type(module)
-        if (not modtype in TRANSPARENT_OPS) and (modtype in VALID_OPS):
+        if (modtype in SOLVEABLE) and (modtype in VALID_OPS):
             outp.append(i)
     return outp
 
@@ -94,7 +99,7 @@ def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor) -> torch.Tenso
             cuweight = cuweight @ weight
         elif type(module) in SINGLEBACK_OPS:
             if weightstate == WeightState.ACCUM:
-                result = torch.linalg.pinv(cuweight) @ result
+                result = result @ torch.linalg.pinv(cuweight).T
                 
                 result = result[:,:-1] #drop constant column
                 #TODO: pop bias off of the reversed result
@@ -118,11 +123,13 @@ def forwardsto(modules: List[nn.Module], n: int, Xs: torch.Tensor) -> torch.Tens
     return Xs
 
 def solvemodule(module: nn.Module, forwX: torch.Tensor, backY: torch.Tensor) -> nn.Module:
+    global APPENDONE
     if type(module) == nn.Linear:
         weight = None
         if module.bias is not None:
             backY = APPENDONE(backY)
             forwX = APPENDONE(forwX)
+
             solved = solvelreg(forwX, backY)
 
             weight = solved[:-1, :-1]
@@ -140,12 +147,17 @@ def solvemodule(module: nn.Module, forwX: torch.Tensor, backY: torch.Tensor) -> 
 
 def solve(modules: List[nn.Module], Xs: torch.Tensor, Ys: torch.Tensor) -> List[nn.Module]:
     solveable = getsolveable(modules)
-    for i in reversed(solveable):
+    # for i in reversed(solveable):
+    #     forwx = forwardsto(modules, i, Xs)
+    #     backy = backwards(modules, i + 1, Ys)
+    #     modules[i] = solvemodule(modules[i], forwx, backy)
+
+    for i in solveable[1:]: 
         forwx = forwardsto(modules, i, Xs)
         backy = backwards(modules, i + 1, Ys)
         modules[i] = solvemodule(modules[i], forwx, backy)
-
-    for i in solveable[1:]: 
+        
+    for i in reversed(solveable):
         forwx = forwardsto(modules, i, Xs)
         backy = backwards(modules, i + 1, Ys)
         modules[i] = solvemodule(modules[i], forwx, backy)
