@@ -99,7 +99,7 @@ def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor) -> torch.Tenso
             cuweight = cuweight @ weight
         elif type(module) in SINGLEBACK_OPS:
             if weightstate == WeightState.ACCUM:
-                result = result @ torch.linalg.pinv(cuweight).T
+                result = result @ torch.linalg.pinv(cuweight, 1e-15).T
                 
                 result = result[:,:-1] #drop constant column
                 #TODO: pop bias off of the reversed result
@@ -113,7 +113,7 @@ def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor) -> torch.Tenso
         # print(cuweight)
         # print(result.T)
         # print(torch.linalg.pinv(cuweight))
-        result = result @ torch.linalg.pinv(cuweight).T # result @ torch.linalg.pinv(cuweight)
+        result = result @ torch.linalg.pinv(cuweight, 1e-15).T # result @ torch.linalg.pinv(cuweight)
         result = result[:,:-1]
     return result
 
