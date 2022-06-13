@@ -61,6 +61,12 @@ class lay_holder:
         backw_val = np.linalg.pinv(backw) @ Ys
         forw_val = self.forward(Xs, n - 1)
 
+        print(f"===============")
+        print(f"SOLVING {n=}")
+        print(f"{backw_val=}")
+        print(f"{forw_val=}")
+        print(f"{appx_solve(forw_val, backw_val)=}")
+
         return appx_solve(forw_val, backw_val)
 
     def solve_update(self, Xs, Ys, n):

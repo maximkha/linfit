@@ -113,8 +113,12 @@ def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor) -> torch.Tenso
         # print(cuweight)
         # print(result.T)
         # print(torch.linalg.pinv(cuweight))
+        print(f"{torch.linalg.pinv(cuweight, 1e-15).T=}")
+        print(f"{cuweight=}")
+
         result = result @ torch.linalg.pinv(cuweight, 1e-15).T # result @ torch.linalg.pinv(cuweight)
         result = result[:,:-1]
+        print(f"{result=}")
     return result
 
 def forwardsto(modules: List[nn.Module], n: int, Xs: torch.Tensor) -> torch.Tensor:
@@ -147,20 +151,32 @@ def solvemodule(module: nn.Module, forwX: torch.Tensor, backY: torch.Tensor) -> 
 
 def solve(modules: List[nn.Module], Xs: torch.Tensor, Ys: torch.Tensor) -> List[nn.Module]:
     solveable = getsolveable(modules)
+    for i in reversed(solveable):
+        print(f"{i=}")
+        forwx = forwardsto(modules, i, Xs)
+        backy = backwards(modules, i + 1, Ys)
+        modules[i] = solvemodule(modules[i], forwx, backy)
+        print(f"===============")
+        print(f"SOLVING {i=}")
+        print(f"{backy=}")
+        print(f"{forwx=}")
+        print(f"{solvemodule(modules[i], forwx, backy)=}")
+
+    for i in solveable:
+        print(f"{i=}")
+        forwx = forwardsto(modules, i, Xs)
+        backy = backwards(modules, i + 1, Ys)
+        modules[i] = solvemodule(modules[i], forwx, backy)
+
     # for i in reversed(solveable):
+    #     print(f"{i=}")
     #     forwx = forwardsto(modules, i, Xs)
     #     backy = backwards(modules, i + 1, Ys)
     #     modules[i] = solvemodule(modules[i], forwx, backy)
 
-    for i in solveable[1:]: 
-        forwx = forwardsto(modules, i, Xs)
-        backy = backwards(modules, i + 1, Ys)
-        modules[i] = solvemodule(modules[i], forwx, backy)
-        
-    for i in reversed(solveable):
-        forwx = forwardsto(modules, i, Xs)
-        backy = backwards(modules, i + 1, Ys)
-        modules[i] = solvemodule(modules[i], forwx, backy)
+    forwx = forwardsto(modules, solveable[-1], Xs)
+    backy = backwards(modules, solveable[-1] + 1, Ys)
+    modules[i] = solvemodule(modules[i], forwx, backy)
 
     return modules
 
@@ -175,7 +191,7 @@ def solvemodel(model: nn.Sequential, Xs: torch.Tensor, Ys: torch.Tensor, errorch
 if __name__ == '__main__':
     mod = nn.Sequential(
         nn.Linear(1, 1, True),
-        nn.ReLU()
+        nn.ReLU(),
     )
     xs = torch.Tensor([[1.],[2.]])
     ys = torch.Tensor([[2.],[3.]])

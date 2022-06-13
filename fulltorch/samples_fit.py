@@ -8,25 +8,43 @@ import linstorch
 import time
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
+from gen_data import gen_random_data_nd
 
-df = pd.read_csv(r"auto-mpg.csv")
-df = df.dropna()
+# df = pd.read_csv(r"data//auto-mpg.csv")
+# df = pd.read_csv(r"data//super_trainb.csv")
+# df = df.dropna()
 
 # Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["mpg", "acceleration", "displacement"]].values, df[["horsepower"]].values, test_size=0.33, random_state=42)
-Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["mpg"]].values, df[["horsepower"]].values, test_size=0.33, random_state=42)
-print(Ys_train)
+# Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["wtd_entropy_FusionHeat"]].values, df[["critical_temp"]].values, test_size=0.25, random_state=42
+# x, y = gen_random_data_nd(np.linspace(-2, 2, 100), 1, 2)
+x = np.stack(np.meshgrid(np.linspace(0., 1., 100), np.linspace(0., 1., 100), indexing='xy')).reshape(2, -1).T
+y = np.cos(x[:,0] + x[:,1])
+y = y.reshape(-1,1)
+# y = y.T
+print(f"{y.shape=}")
+# import matplotlib.pyplot as plt
+# for i in range(y.shape[1]):
+#     plt.scatter(x, y[:, i])
+#     plt.show()
+Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(x, y, test_size=0.33, random_state=42)
 
-Xs_train = Xs_train - np.mean(Xs_train)
-Xs_train /= np.std(Xs_train)
+x_mean = np.mean(Xs_train)
+x_std = np.std(Xs_train)
 
-Xs_test = Xs_test - np.mean(Xs_test)
-Xs_test /= np.std(Xs_test)
+Xs_train -= x_mean
+Xs_train /= x_std
 
-Ys_train = Ys_train - np.mean(Ys_train)
-Ys_train /= np.std(Ys_train)
+Xs_test -= x_mean
+Xs_test /= x_std
 
-Ys_test = Ys_test - np.mean(Ys_test)
-Ys_test /= np.std(Ys_test)
+y_mean = np.mean(Ys_train)
+y_std = np.std(Ys_train)
+
+Ys_train -= y_mean
+Ys_train /= y_std
+
+Ys_test -= y_mean
+Ys_test /= y_std
 
 Ys_train = torch.tensor(Ys_train).float()#.cuda()
 Ys_test = torch.tensor(Ys_test).float()#.cuda()
@@ -42,10 +60,10 @@ from tqdm import tqdm
 
 def genmodel() -> torch.nn.Sequential:
     mod = nn.Sequential(
-        nn.Linear(1, 10),
+        nn.Linear(2, 10),
         nn.ReLU(),
-        nn.Linear(10, 10),
-        nn.ReLU(),
+        # nn.Linear(10, 10),
+        # nn.ReLU(),
         nn.Linear(10, 1),
     )
 
@@ -86,13 +104,13 @@ MODE = "weighted"
 
 perf_data = defaultdict(lambda: [])
 
-#WARM UP
-mod = genmodel()
-mod = linstorch.solvemodel(mod, Xs_train, Ys_train)
+# #WARM UP
+# mod = genmodel()
+# mod = linstorch.solvemodel(mod, Xs_train, Ys_train)
 
-A = np.vstack([Xs_train.cpu().numpy()[:,0], np.ones(len(Xs_train.cpu().numpy()))]).T
-m, c = np.linalg.lstsq(A, Ys_train.cpu().numpy(), rcond=None)[0]
-print(f"{np.mean((Ys_train.cpu().numpy() - ((Xs_train.cpu().numpy() * m) + c))**2)=}")
+# A = np.vstack([Xs_train.cpu().numpy()[:,0], np.ones(len(Xs_train.cpu().numpy()))]).T
+# m, c = np.linalg.lstsq(A, Ys_train.cpu().numpy(), rcond=None)[0]
+# print(f"{np.mean((Ys_train.cpu().numpy() - ((Xs_train.cpu().numpy() * m) + c))**2)=}")
 # exit()
 
 # for i in tqdm(list(range(100))):
@@ -112,9 +130,11 @@ print(f"{np.mean((Ys_train.cpu().numpy() - ((Xs_train.cpu().numpy() * m) + c))**
 #     perf_data["elapsed"].append(elapsedsecs)
 #     perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
 
+# .7, .45, 20
+
 print("linstorch")
 with torch.no_grad():
-    for goal in np.linspace(.7, .45, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
+    for goal in np.linspace(1., .07, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
         print(f"goal:{goal}")
         for i in tqdm(list(range(100))):
             mod = genmodel()
@@ -129,6 +149,26 @@ with torch.no_grad():
 
             perf_data["model"].append(f"linstorch({goal})")
             perf_data["type"].append(f"linstorch")
+            perf_data["elapsed"].append(elapsedsecs)
+            perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
+
+print("RANDOM")
+with torch.no_grad():
+    for goal in np.linspace(1., 0.4, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
+        print(f"goal:{goal}")
+        for i in tqdm(list(range(100))):
+            mod = genmodel()
+            t0 = time.time()
+            while True:
+                mod = genmodel()
+                # mod = linstorch.solvemodel(mod, Xs_train, Ys_train)
+                if torch.mean(((mod(Xs_train) - Ys_train)**2)) <= goal: break
+
+            elapsedsecs = time.time() - t0
+            forw = mod.forward(Xs_test)
+
+            perf_data["model"].append(f"RANDOM({goal})")
+            perf_data["type"].append(f"RANDOM")
             perf_data["elapsed"].append(elapsedsecs)
             perf_data["mse"].append(np.mean(((forw - Ys_test)**2).detach().cpu().numpy()))
 
@@ -154,7 +194,7 @@ for j in list(range(1, 4)):
 
 print("Adagrad")
 
-for j in list(range(1, 25)):
+for j in list(range(1, 4)):
     for i in tqdm(list(range(100))):
         mod = genmodel()
         t0 = time.time()
