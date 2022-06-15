@@ -38,7 +38,7 @@ def checkvalidops(modules: List[nn.Module]):
 
 def biasweight(linlay:nn.Linear):
     appendzeros = nn.ConstantPad1d((0,1), 0.)
-    # print(linlay.weight)
+    # print(f"{linlay.weight=}")
     weightwpass = appendzeros(linlay.weight)
     ncol = weightwpass.size(1)
     weightwpass = torch.vstack((weightwpass, torch.zeros(ncol, device=weightwpass.device)))
@@ -90,16 +90,20 @@ def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor) -> torch.Tenso
         if type(module) == nn.Linear:
             weight = biasweight(module)
             # print(weight)
+            # print(f"{weight=}")
             if weightstate == WeightState.NO:
                 result = APPENDONE(result)
                 # print(result)
                 weightstate = WeightState.ACCUM
                 cuweight = weight
                 continue
+            # print(f"{cuweight=}")
             cuweight = cuweight @ weight
+            # print(f"{cuweight=}")
+
         elif type(module) in SINGLEBACK_OPS:
             if weightstate == WeightState.ACCUM:
-                result = result @ torch.linalg.pinv(cuweight, 1e-15).T
+                result = result @ torch.linalg.pinv(cuweight, 1e-15)
                 
                 result = result[:,:-1] #drop constant column
                 #TODO: pop bias off of the reversed result
@@ -113,12 +117,12 @@ def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor) -> torch.Tenso
         # print(cuweight)
         # print(result.T)
         # print(torch.linalg.pinv(cuweight))
-        print(f"{torch.linalg.pinv(cuweight, 1e-15).T=}")
-        print(f"{cuweight=}")
+        # print(f"{torch.linalg.pinv(cuweight, 1e-15).T=}")
+        # print(f"{cuweight=}")
 
         result = result @ torch.linalg.pinv(cuweight, 1e-15).T # result @ torch.linalg.pinv(cuweight)
         result = result[:,:-1]
-        print(f"{result=}")
+        # print(f"{result=}")
     return result
 
 def forwardsto(modules: List[nn.Module], n: int, Xs: torch.Tensor) -> torch.Tensor:
@@ -131,13 +135,16 @@ def solvemodule(module: nn.Module, forwX: torch.Tensor, backY: torch.Tensor) -> 
     if type(module) == nn.Linear:
         weight = None
         if module.bias is not None:
-            backY = APPENDONE(backY)
+            # backY = APPENDONE(backY)
             forwX = APPENDONE(forwX)
 
             solved = (torch.linalg.pinv(forwX) @ backY).T # solvelreg(forwX, backY)
 
-            weight = solved[:-1, :-1]
-            bias = solved[:-1, -1]
+            # weight = solved[:-1, :-1]
+            weight = solved[:, :-1]
+            # bias = solved[:-1, -1]
+            bias = solved[:, -1]
+            # print("new!")
 
             module.bias = nn.Parameter(bias)
         else:
@@ -152,31 +159,26 @@ def solvemodule(module: nn.Module, forwX: torch.Tensor, backY: torch.Tensor) -> 
 def solve(modules: List[nn.Module], Xs: torch.Tensor, Ys: torch.Tensor) -> List[nn.Module]:
     solveable = getsolveable(modules)
     for i in reversed(solveable):
-        print(f"{i=}")
+        # print(f"{i=}")
         forwx = forwardsto(modules, i, Xs)
         backy = backwards(modules, i + 1, Ys)
         modules[i] = solvemodule(modules[i], forwx, backy)
-        print(f"===============")
-        print(f"SOLVING {i=}")
-        print(f"{backy=}")
-        print(f"{forwx=}")
-        print(f"{solvemodule(modules[i], forwx, backy)=}")
 
     for i in solveable:
-        print(f"{i=}")
+        # print(f"{i=}")
         forwx = forwardsto(modules, i, Xs)
         backy = backwards(modules, i + 1, Ys)
         modules[i] = solvemodule(modules[i], forwx, backy)
 
     # for i in reversed(solveable):
-    #     print(f"{i=}")
+    #     # print(f"{i=}")
     #     forwx = forwardsto(modules, i, Xs)
     #     backy = backwards(modules, i + 1, Ys)
     #     modules[i] = solvemodule(modules[i], forwx, backy)
 
     forwx = forwardsto(modules, solveable[-1], Xs)
     backy = backwards(modules, solveable[-1] + 1, Ys)
-    modules[i] = solvemodule(modules[i], forwx, backy)
+    modules[solveable[-1]] = solvemodule(modules[solveable[-1]], forwx, backy)
 
     return modules
 
@@ -198,4 +200,4 @@ if __name__ == '__main__':
 
     mod = solvemodel(mod, xs, ys)
 
-    print(mod(xs))
+    # print(mod(xs))

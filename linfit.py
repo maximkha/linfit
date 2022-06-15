@@ -1,6 +1,5 @@
 from typing import List
 import numpy as np
-from funcy import print_durations
 
 # approximates the solution for A x = y, e.g. linear regression
 def appx_solve(x, y):
@@ -48,10 +47,15 @@ class lay_holder:
             raise ValueError("Can't backward that many layers!")
         
         prod = self.layers[-1].f
+        print(f"{self.layers[-1].f=}")
         if n == 1: return prod
         for i in range(n - 1):
             layer = self.layers[len(self.layers) - i - 2]
+            print(f"{layer.f=}")
+            print(f"{prod=}")
+
             prod = prod @ layer.f
+            print(f"{prod=}")
         
         return prod
     
@@ -65,7 +69,20 @@ class lay_holder:
         print(f"SOLVING {n=}")
         print(f"{backw_val=}")
         print(f"{forw_val=}")
-        print(f"{appx_solve(forw_val, backw_val)=}")
+        solved = appx_solve(forw_val, backw_val)
+
+        solved[-1] = ([0]*(solved.shape[-1] - 1)) + [1]
+        weight = solved[:-1, :-1]
+        bias = solved[:-1, -1]
+        print(f"{solved=}")
+
+        print(f"{weight=}")
+        print(f"{bias=}")
+
+        print(f"{forw_val=}")
+        print(f"{backw_val=}")
+
+        print(f"{(((solved @ forw_val)-backw_val)**2).mean()=}")
 
         return appx_solve(forw_val, backw_val)
 

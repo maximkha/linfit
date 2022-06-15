@@ -40,15 +40,41 @@ modules[0].weight = nn.Parameter(torch.tensor([[1,2]]).T.float())
 modules[2].weight = nn.Parameter(torch.tensor([[1,2],[1,2]]).float())
 modules[4].weight = nn.Parameter(torch.tensor([[1],[2]]).T.float())
 
-mod = linstorch.solvemodel(mod, Xs, Ys_wish)
+lay = linstorch.biasweight(modules[0])
+print(f"{lay=}")
 
-mse_mod = torch.mean((mod(Xs) - Ys_wish)**2)
+print(f"{lay@linstorch.APPENDONE(Xs).T=}")
+print(f"{(lay@linstorch.APPENDONE(Xs).T).T[:,:-1]=}")
+
+print(f"{modules[0](Xs)=}")
+mods = linstorch.flattenseq(mod)
+solvables = linstorch.getsolveable(mods)
+s_mods = [mods[i] for i in solvables]
+backw = linstorch.backwards(s_mods, 1, Ys_wish)
+print(f"{backw=}")
+
+linstorch.solvemodule(modules[0], Xs, backw)
+
+exit()
+
+mods = linstorch.flattenseq(mod)
+solvables = linstorch.getsolveable(mods)
+s_mods = [mods[i] for i in solvables]
+backw = linstorch.backwards(s_mods, 1, Ys_wish)
+print(f"{backw=}")
+# linstorch.solvemodule(s_mods[0], Xs, backw)
+
+# mod = linstorch.solvemodel(mod, Xs, Ys_wish)
+
+print(f"{mod(Xs)=}")
+
+# mse_mod = torch.mean((mod(Xs) - Ys_wish)**2)
 
 modu = linstorch.flattenseq(mod)
-print(f"{linstorch.forwardsto(modu, len(modu)-1, Xs) - mod(Xs)=}")
+# print(f"{linstorch.forwardsto(modu, len(modu)-1, Xs) - mod(Xs)=}")
 
-print(f"{mse_mod=}")
+# print(f"{mse_mod=}")
 
-import matplotlib.pyplot as plt
-plt.plot(Xs.detach().numpy(), mod(Xs).detach().numpy(), label='relu with training (custom)')
-plt.show()
+# import matplotlib.pyplot as plt
+# plt.plot(Xs.detach().numpy(), mod(Xs).detach().numpy(), label='relu with training (custom)')
+# plt.show()
