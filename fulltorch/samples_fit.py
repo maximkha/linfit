@@ -10,29 +10,29 @@ from collections import defaultdict
 from sklearn.model_selection import train_test_split
 from gen_data import gen_random_data_nd
 
-df = pd.read_csv(r"fulltorch//data//auto-mpg.csv")
+# df = pd.read_csv(r"fulltorch//data//auto-mpg.csv")
 # df = pd.read_csv(r"data//super_trainb.csv")
-df = df.dropna()
+# df = df.dropna()
 
-Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["mpg", "acceleration", "displacement"]].values, df[["horsepower"]].values, test_size=0.33, random_state=42)
+# Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["mpg", "acceleration", "displacement"]].values, df[["horsepower"]].values, test_size=0.33, random_state=42)
 # print(f"{Ys_train=}")
 
 # Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["wtd_entropy_FusionHeat"]].values, df[["critical_temp"]].values, test_size=0.25, random_state=42
 # x, y = gen_random_data_nd(np.linspace(-2, 2, 100), 1, 1)
 # x = np.stack(np.meshgrid(np.linspace(0., 1., 100), np.linspace(0., 1., 100), indexing='xy')).reshape(2, -1).T
 # y = np.cos(x[:,0] + x[:,1])
-# x = np.linspace(0, 10, 1001) * 2 * np.pi * (1/10)
-# # y = np.sin(x) + 1
+x = np.linspace(0, 10, 1001) * 2 * np.pi * (1/10)
+y = np.sin(x) + 1
 # y = np.cos(x) + 1
-# y = y.reshape(-1,1)
-# x = x.reshape(-1,1)
+y = y.reshape(-1,1)
+x = x.reshape(-1,1)
 # y = y.T
 # print(f"{y.shape=}")
 import matplotlib.pyplot as plt
 # for i in range(y.shape[1]):
 #     plt.scatter(x, y[:, i])
 #     plt.show()
-# Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(x, y, test_size=0.33, random_state=42)
+Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(x, y, test_size=0.33, random_state=42)
 
 x_mean = np.mean(Xs_train)
 x_std = np.std(Xs_train)
@@ -69,10 +69,12 @@ from tqdm import tqdm
 
 def genmodel() -> torch.nn.Sequential:
     mod = nn.Sequential(
-        nn.Linear(3, 10),
-        nn.ReLU(),
-        # nn.Linear(10, 10),
+        nn.Linear(1, 10),
         # nn.ReLU(),
+        nn.LeakyReLU(0.3),
+        nn.Linear(10, 10),
+        # nn.ReLU(),
+        nn.LeakyReLU(0.3),
         nn.Linear(10, 1),
     )
 
@@ -160,7 +162,7 @@ with torch.no_grad():
     # for goal in np.linspace(1., .07, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
     # for goal in np.linspace(1., .3, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
     # for goal in np.linspace(1., .9, 40): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
-    for goal in np.linspace(.14, .11, 50): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
+    for goal in np.linspace(0.3843, .26, 50): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
         print(f"goal:{goal}")
         for i in tqdm(list(range(100))):
             mod = genmodel()
@@ -180,7 +182,7 @@ with torch.no_grad():
 
 print("RANDOM")
 with torch.no_grad():
-    for goal in np.linspace(1., 0.56, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
+    for goal in np.linspace(1., 0.7, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
         print(f"goal:{goal}")
         for i in tqdm(list(range(100))):
             mod = genmodel()
