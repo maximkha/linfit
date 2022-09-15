@@ -54,23 +54,34 @@ lin_mse = torch.mean(((linear_model(Xs) - Ys_wish)**2)).detach().item()
 # plt.show()
 
 mse_s = []
-for i in range(500):
+for i in range(1000):
     mod = genmodel()
     mod = linstorch.solvemodel(mod, Xs, Ys_wish)
     mse = torch.mean(((mod(Xs) - Ys_wish)**2))
 
     mse_s.append(mse.detach().item())
 
+# plt.hist(mse_s, label="Linstorch MSEs")
 plt.hist(mse_s, label="Linstorch MSEs")
+# plt.hist(mse_s, label="Random Model MSEs")
+
 plt.axvline(lin_mse, color='k', linestyle='dashed', linewidth=1)
 
 print(f"{np.max(mse_s)=}")
 
 min_ylim, max_ylim = plt.ylim()
+# plt.text(lin_mse*.675, max_ylim*0.9, 'linear reg MSE: {:.2f}'.format(lin_mse))
+mean_mse = np.mean(mse_s)
+plt.text(mean_mse*1.05, max_ylim*0.8, 'mean MSE: {:.2f}'.format(mean_mse))
+plt.axvline(mean_mse, color='k', linestyle='solid', linewidth=1)
+
+# min_ylim, max_ylim = plt.ylim()
 plt.text(lin_mse*.675, max_ylim*0.9, 'linear reg MSE: {:.2f}'.format(lin_mse))
-# plt.title("Random model MSE distribution")
+# plt.text(lin_mse*200, max_ylim*0.9, 'linear reg MSE: {:.2f}'.format(lin_mse))
+
+plt.title("Linstorch trained model MSE distribution (n=1000)")
 plt.xlabel("MSE")
 plt.ylabel("Count")
 
-# plt.title("Random and Linstorch model MSE distribution")
+# plt.title("Random and Linstorch model MSE distribution (n=1000)")
 plt.show()

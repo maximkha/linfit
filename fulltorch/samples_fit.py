@@ -10,11 +10,13 @@ from collections import defaultdict
 from sklearn.model_selection import train_test_split
 from gen_data import gen_random_data_nd
 
-df = pd.read_csv(r"fulltorch//data//auto-mpg.csv")
+# df = pd.read_csv(r"fulltorch//data//auto-mpg.csv")
+df = pd.read_csv(r"fulltorch//data//Concrete_Data.csv")
 # df = pd.read_csv(r"data//super_trainb.csv")
 df = df.dropna()
 
-Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["mpg", "acceleration", "displacement"]].values, df[["horsepower"]].values, test_size=0.33, random_state=42)
+Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["Cement", "Blast_Furnace_Slag", "Fly_Ash","Water","Superplasticizer","Coarse_Aggregate","Fine_Aggregate","Age"]].values, df[["Concrete_compressive_strength"]].values, test_size=0.33, random_state=42)
+# Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["mpg", "acceleration", "displacement"]].values, df[["horsepower"]].values, test_size=0.33, random_state=42)
 # print(f"{Ys_train=}")
 
 # Xs_train, Xs_test, Ys_train, Ys_test = train_test_split(df[["wtd_entropy_FusionHeat"]].values, df[["critical_temp"]].values, test_size=0.25, random_state=42
@@ -69,7 +71,7 @@ from tqdm import tqdm
 
 def genmodel() -> torch.nn.Sequential:
     mod = nn.Sequential(
-        nn.Linear(3, 10),
+        nn.Linear(8, 10),
         nn.ReLU(),
         # nn.Linear(10, 10),
         # nn.ReLU(),
@@ -143,7 +145,7 @@ perf_data = defaultdict(lambda: [])
 
 print("lin reg")
 with torch.no_grad():
-    mod = nn.Sequential(nn.Linear(3, 1))
+    mod = nn.Sequential(nn.Linear(8, 1))
     t0 = time.time()
     mod = linstorch.solvemodel(mod, Xs_train, Ys_train)
     elapsedsecs = time.time() - t0
@@ -160,7 +162,7 @@ with torch.no_grad():
     # for goal in np.linspace(1., .07, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
     # for goal in np.linspace(1., .3, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
     # for goal in np.linspace(1., .9, 40): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
-    for goal in np.linspace(.14, .11, 50): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
+    for goal in np.linspace(0.4, 0.3632, 50): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
         print(f"goal:{goal}")
         for i in tqdm(list(range(100))):
             mod = genmodel()
@@ -180,7 +182,7 @@ with torch.no_grad():
 
 print("RANDOM")
 with torch.no_grad():
-    for goal in np.linspace(1., 0.56, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
+    for goal in np.linspace(1., 0.93, 20): # for goal in np.linspace(1., .82, 20): #np.linspace(.7, .13, 20):#np.linspace(.7, .3, 20): #[7.,.65,.6,.55,.5,.45]: #,.4,.35,.3]:
         print(f"goal:{goal}")
         for i in tqdm(list(range(100))):
             mod = genmodel()

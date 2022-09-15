@@ -158,17 +158,18 @@ def solvemodule(module: nn.Module, forwX: torch.Tensor, backY: torch.Tensor) -> 
 
 def solve(modules: List[nn.Module], Xs: torch.Tensor, Ys: torch.Tensor) -> List[nn.Module]:
     solveable = getsolveable(modules)
-    for i in reversed(solveable):
-        # print(f"{i=}")
-        forwx = forwardsto(modules, i, Xs)
-        backy = backwards(modules, i + 1, Ys)
-        modules[i] = solvemodule(modules[i], forwx, backy)
-
-    for i in solveable:
-        # print(f"{i=}")
-        forwx = forwardsto(modules, i, Xs)
-        backy = backwards(modules, i + 1, Ys)
-        modules[i] = solvemodule(modules[i], forwx, backy)
+    for _ in range(1):
+        for i in reversed(solveable):
+            # print(f"{i=}")
+            forwx = forwardsto(modules, i, Xs)
+            backy = backwards(modules, i + 1, Ys)
+            modules[i] = solvemodule(modules[i], forwx, backy)
+        
+        for i in solveable:
+            # print(f"{i=}")
+            forwx = forwardsto(modules, i, Xs)
+            backy = backwards(modules, i + 1, Ys)
+            modules[i] = solvemodule(modules[i], forwx, backy)
 
     # for i in reversed(solveable):
     #     # print(f"{i=}")
@@ -176,9 +177,9 @@ def solve(modules: List[nn.Module], Xs: torch.Tensor, Ys: torch.Tensor) -> List[
     #     backy = backwards(modules, i + 1, Ys)
     #     modules[i] = solvemodule(modules[i], forwx, backy)
 
-    forwx = forwardsto(modules, solveable[-1], Xs)
-    backy = backwards(modules, solveable[-1] + 1, Ys)
-    modules[solveable[-1]] = solvemodule(modules[solveable[-1]], forwx, backy)
+    # forwx = forwardsto(modules, solveable[-1], Xs)
+    # backy = backwards(modules, solveable[-1] + 1, Ys)
+    # modules[solveable[-1]] = solvemodule(modules[solveable[-1]], forwx, backy)
 
     return modules
 

@@ -29,17 +29,16 @@ def genmodel() -> torch.nn.Sequential:
 
     return mod
 
-plt.plot(Xs, Ys_wish.detach().numpy(), label="original")
+linear_model = nn.Sequential(nn.Linear(1, 1, True))
+linear_model = linstorch.solvemodel(linear_model, Xs, Ys_wish)
+lin_mse = torch.mean(((linear_model(Xs) - Ys_wish)**2)).detach().item()
 
-ALPHA = .1
+mse_s = []
 for i in range(1000):
     mod = genmodel()
     mod = linstorch.solvemodel(mod, Xs, Ys_wish)
-    print(f"{torch.mean(((mod(Xs) - Ys_wish)**2))=}")
-    if i == 0:
-        plt.plot(Xs, mod(Xs).detach().numpy(), alpha=ALPHA, color="orange", label="linstorch")
-    else:
-        plt.plot(Xs, mod(Xs).detach().numpy(), alpha=ALPHA, color="orange")
+    mse = torch.mean(((mod(Xs) - Ys_wish)**2))
 
-plt.legend()
-plt.show()
+    mse_s.append(mse.detach().item())
+
+print(np.mean(mse_s))
