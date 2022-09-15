@@ -20,9 +20,9 @@ def flattenseq(model:nn.Sequential) -> List[nn.Module]:
             flat_layers.extend(flattenseq(module))
     return flat_layers
 
-VALID_OPS = [nn.Linear, nn.ReLU, nn.ELU, nn.Softmax, nn.Identity] # for now, we'll only support these
+VALID_OPS = [nn.Linear, nn.ReLU, nn.ELU, nn.Softmax, nn.Identity, nn.LeakyReLU] # for now, we'll only support these
 TRANSPARENT_OPS = [nn.ReLU, nn.Softmax, nn.Identity]
-SINGLEBACK_OPS = [nn.ELU]
+SINGLEBACK_OPS = [nn.ELU, nn.LeakyReLU]
 SOLVEABLE = [nn.Linear]
 
 # maybe make a wrapper class for seq???
@@ -61,6 +61,9 @@ def backsingle(module: nn.Module, Ys: torch.Tensor) -> torch.Tensor:
         assert module.alpha == 1.
         x = torch.where(Ys < 0, torch.log(Ys+1), Ys)
         x[x==-float('inf')] = -36.7368 #empirical
+        return x
+    if type(module) == nn.LeakyReLU:
+        x = torch.where(Ys < 0, Ys, Ys/module.negative_slope)
         return x
 
     raise NotImplementedError()
@@ -103,7 +106,7 @@ def backwards(modules: List[nn.Module], layern, Ys: torch.Tensor) -> torch.Tenso
 
         elif type(module) in SINGLEBACK_OPS:
             if weightstate == WeightState.ACCUM:
-                result = result @ torch.linalg.pinv(cuweight, 1e-15)
+                result = result @ torch.linalg.pinv(cuweight, 1e-15).T
                 
                 result = result[:,:-1] #drop constant column
                 #TODO: pop bias off of the reversed result

@@ -77,9 +77,13 @@ plt.axvline(mean_mse, color='k', linestyle='solid', linewidth=1)
 
 # min_ylim, max_ylim = plt.ylim()
 plt.text(lin_mse*.675, max_ylim*0.9, 'linear reg MSE: {:.2f}'.format(lin_mse))
-# plt.text(lin_mse*200, max_ylim*0.9, 'linear reg MSE: {:.2f}'.format(lin_mse))
+# plt.title("Random model MSE distribution")
 
-plt.title("Linstorch trained model MSE distribution (n=1000)")
+mean_mse = np.mean(mse_s)
+plt.axvline(mean_mse, color='k', linestyle='solid', linewidth=1)
+plt.text(mean_mse*1.05, max_ylim*0.8, 'mean MSE: {:.2f}'.format(mean_mse))
+# plt.title("Random model MSE distribution")
+
 plt.xlabel("MSE")
 plt.ylabel("Count")
 
